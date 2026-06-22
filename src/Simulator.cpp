@@ -1,7 +1,7 @@
-// Simulator.cpp - Executa a simulação completa
+// Simulator.cpp - Executa a simulacao completa
 #include "Simulator.h"
 
-// Construtor: armazena todas as configurações para a simulação
+// Construtor: guardo as configuracoes escolhidas para usar depois na execucao.
 Simulador::Simulador(PoliticaEscalonamento pol_esc, int quantum,
                      int mem_fisica, int tam_pagina,
                      PoliticaSubstituicao pol_mem)
@@ -9,41 +9,42 @@ Simulador::Simulador(PoliticaEscalonamento pol_esc, int quantum,
       memoria_fisica_mb(mem_fisica), tamanho_pagina_mb(tam_pagina),
       politica_memoria(pol_mem) {}
 
-// Função principal: executa toda a simulação
+// Funcao principal: aqui acontece a simulacao de ponta a ponta.
 ResultadoSimulacao Simulador::executar(std::vector<Processo> processos) {
-    // ETAPA 1: ESCALONAMENTO
-    // Decide em qual ordem os processos executam usando o algoritmo escolhido
+    // ETAPA 1 - ESCALONAMENTO
+    // Primeiro eu gero a timeline (ordem de execucao dos processos).
     Escalonador escalonador(politica_escalonamento, quantum);
     auto timeline = escalonador.executar(processos);
 
-    // ETAPA 2: SIMULAÇÃO DE MEMÓRIA
-    // Simula como o sistema acessa as páginas de memória
-    // Cada vez que um processo executa, acessa sua página de memória
+    // ETAPA 2 - MEMORIA
+    // Depois simulo os acessos de memoria em cima da timeline.
+    // Neste modelo atual, cada processo acessa uma pagina ligada ao PID.
     GerenciadorMemoria memoria(memoria_fisica_mb, tamanho_pagina_mb, politica_memoria);
     for (auto& entrada : timeline) {
-        // Simplificação: cada processo = 1 página
+        // Simplificacao didatica: processo -> 1 pagina.
         int id_pagina = entrada.pid;
-        // Simula acesso à página (pode gerar page fault)
+        // Cada acesso pode (ou nao) gerar page fault.
         memoria.acessarPagina(id_pagina);
     }
 
-    // ETAPA 3: CÁLCULO DAS MÉTRICAS
-    // Calcula as estatisticas importantes da simulação
-    double soma_espera    = 0;   // Soma de todos os tempos de espera
-    double soma_resposta  = 0;   // Soma de todos os tempos de resposta
+    // ETAPA 3 - METRICAS FINAIS
+    // Aqui eu somo os tempos para tirar as medias do relatorio.
+    double soma_espera    = 0;
+    double soma_resposta  = 0;
     
     for (auto& proc : processos) {
-        soma_espera   += proc.tempo_espera;     // Acumula tempos de espera
-        soma_resposta += proc.tempo_resposta;   // Acumula tempos de resposta
+        soma_espera   += proc.tempo_espera;
+        soma_resposta += proc.tempo_resposta;
     }
-    int n = processos.size();  // Total de processos
+    int n = processos.size();
 
-    // Retorna todos os resultados da simulação
+    // ETAPA 4 - EMPACOTAR RESULTADO
+    // Retorno tudo que a GUI/terminal precisa mostrar.
     return {
-        timeline,                              // Quando cada processo executou
-        processos,                             // Processos com métricas calculadas
-        soma_espera   / n,                     // Média de espera
-        soma_resposta / n,                     // Média de resposta
-        memoria.totalPageFaults()              // Total de page faults
+        timeline,
+        processos,
+        soma_espera   / n,
+        soma_resposta / n,
+        memoria.totalPageFaults()
     };
 }
