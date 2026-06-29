@@ -49,6 +49,8 @@ public:
     QSpinBox *spinMemFisica;
     QLabel *labelTamPagina;
     QSpinBox *spinTamPagina;
+    QLabel *labelMemVirtual;
+    QSpinBox *spinMemVirtual;
     QLabel *labelSubstituicao;
     QComboBox *comboSubstituicao;
     QSpacerItem *spacerV;
@@ -90,7 +92,7 @@ public:
         layoutPrincipal = new QHBoxLayout(centralwidget);
         layoutPrincipal->setSpacing(0);
         layoutPrincipal->setObjectName("layoutPrincipal");
-        layoutPrincipal->setContentsMargins(0);
+        layoutPrincipal->setContentsMargins(0, 0, 0, 0);
         painelEsq = new QWidget(centralwidget);
         painelEsq->setObjectName("painelEsq");
         painelEsq->setMinimumWidth(220);
@@ -98,8 +100,7 @@ public:
         layoutEsq = new QVBoxLayout(painelEsq);
         layoutEsq->setSpacing(8);
         layoutEsq->setObjectName("layoutEsq");
-        layoutEsq->setContentsMargins(14);
-        layoutEsq->setContentsMargins(0, 0, 0, 0);
+        layoutEsq->setContentsMargins(14, 14, 14, 14);
         secaoArquivo = new QLabel(painelEsq);
         secaoArquivo->setObjectName("secaoArquivo");
 
@@ -182,6 +183,20 @@ public:
 
         layoutEsq->addWidget(spinTamPagina);
 
+        labelMemVirtual = new QLabel(painelEsq);
+        labelMemVirtual->setObjectName("labelMemVirtual");
+
+        layoutEsq->addWidget(labelMemVirtual);
+
+        spinMemVirtual = new QSpinBox(painelEsq);
+        spinMemVirtual->setObjectName("spinMemVirtual");
+        spinMemVirtual->setMinimum(128);
+        spinMemVirtual->setMaximum(8192);
+        spinMemVirtual->setSingleStep(64);
+        spinMemVirtual->setValue(512);
+
+        layoutEsq->addWidget(spinMemVirtual);
+
         labelSubstituicao = new QLabel(painelEsq);
         labelSubstituicao->setObjectName("labelSubstituicao");
 
@@ -214,15 +229,14 @@ public:
         layoutDir = new QVBoxLayout(painelDir);
         layoutDir->setSpacing(12);
         layoutDir->setObjectName("layoutDir");
-        layoutDir->setContentsMargins(14);
-        layoutDir->setContentsMargins(0, 0, 0, 0);
+        layoutDir->setContentsMargins(14, 14, 14, 14);
         tabWidget = new QTabWidget(painelDir);
         tabWidget->setObjectName("tabWidget");
         abaTimeline = new QWidget();
         abaTimeline->setObjectName("abaTimeline");
         vboxLayout = new QVBoxLayout(abaTimeline);
         vboxLayout->setObjectName("vboxLayout");
-        vboxLayout->setContentsMargins(8);
+        vboxLayout->setContentsMargins(8, 8, 8, 8);
         labelInfoTimeline = new QLabel(abaTimeline);
         labelInfoTimeline->setObjectName("labelInfoTimeline");
 
@@ -239,7 +253,7 @@ public:
         abaTabela->setObjectName("abaTabela");
         vboxLayout1 = new QVBoxLayout(abaTabela);
         vboxLayout1->setObjectName("vboxLayout1");
-        vboxLayout1->setContentsMargins(8);
+        vboxLayout1->setContentsMargins(8, 8, 8, 8);
         tabelaProcessos = new QTableWidget(abaTabela);
         if (tabelaProcessos->columnCount() < 7)
             tabelaProcessos->setColumnCount(7);
@@ -267,7 +281,7 @@ public:
         abaMemoria->setObjectName("abaMemoria");
         vboxLayout2 = new QVBoxLayout(abaMemoria);
         vboxLayout2->setObjectName("vboxLayout2");
-        vboxLayout2->setContentsMargins(8);
+        vboxLayout2->setContentsMargins(8, 8, 8, 8);
         textoMemoria = new QTextEdit(abaMemoria);
         textoMemoria->setObjectName("textoMemoria");
         textoMemoria->setReadOnly(true);
@@ -286,7 +300,7 @@ public:
         cardEspera->setFrameShape(QFrame::StyledPanel);
         vboxLayout3 = new QVBoxLayout(cardEspera);
         vboxLayout3->setObjectName("vboxLayout3");
-        vboxLayout3->setContentsMargins(10);
+        vboxLayout3->setContentsMargins(10, 10, 10, 10);
         labelEsperaDesc = new QLabel(cardEspera);
         labelEsperaDesc->setObjectName("labelEsperaDesc");
 
@@ -305,7 +319,7 @@ public:
         cardResposta->setFrameShape(QFrame::StyledPanel);
         vboxLayout4 = new QVBoxLayout(cardResposta);
         vboxLayout4->setObjectName("vboxLayout4");
-        vboxLayout4->setContentsMargins(10);
+        vboxLayout4->setContentsMargins(10, 10, 10, 10);
         labelRespostaDesc = new QLabel(cardResposta);
         labelRespostaDesc->setObjectName("labelRespostaDesc");
 
@@ -324,7 +338,7 @@ public:
         cardFaults->setFrameShape(QFrame::StyledPanel);
         vboxLayout5 = new QVBoxLayout(cardFaults);
         vboxLayout5->setObjectName("vboxLayout5");
-        vboxLayout5->setContentsMargins(10);
+        vboxLayout5->setContentsMargins(10, 10, 10, 10);
         labelFaultsDesc = new QLabel(cardFaults);
         labelFaultsDesc->setObjectName("labelFaultsDesc");
 
@@ -370,6 +384,7 @@ public:
         secaoMemoria->setText(QCoreApplication::translate("MainWindow", "MEMORIA", nullptr));
         labelMemFisica->setText(QCoreApplication::translate("MainWindow", "Memoria fisica (MB)", nullptr));
         labelTamPagina->setText(QCoreApplication::translate("MainWindow", "Tamanho da pagina (MB)", nullptr));
+        labelMemVirtual->setText(QCoreApplication::translate("MainWindow", "Memoria virtual (MB)", nullptr));
         labelSubstituicao->setText(QCoreApplication::translate("MainWindow", "Substituicao de paginas", nullptr));
         comboSubstituicao->setItemText(0, QCoreApplication::translate("MainWindow", "FIFO", nullptr));
         comboSubstituicao->setItemText(1, QCoreApplication::translate("MainWindow", "LRU", nullptr));

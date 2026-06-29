@@ -1,45 +1,45 @@
-// CSVParser.cpp - Implementação do leitor de CSV
+// CSVParser.cpp - implementação do leitor de arquivo CSV
 #include "CSVParser.h"
-#include <fstream>      // Para ler arquivo
-#include <sstream>      // Para processar strings
+#include <fstream>      // Para abrir e ler o arquivo
+#include <sstream>      // Para separar cada linha por vírgula
 
-// Função que lê um arquivo CSV com lista de processos
-// O arquivo deve ter este formato (sem cabeçalho ou com):
-// tempo_chegada,tempo_execucao,prioridade,memoria_necessaria
-// Ex:
+// Essa função lê o arquivo de processos e monta um vetor com todos eles.
+// O CSV deve ter cabeçalho e depois cada linha com:
+// chegada,burst,prioridade,memoria
+// Exemplo:
 // 0,5,1,128
 // 1,3,2,256
 // 2,6,1,64
 std::vector<Processo> LeitorCSV::ler(const std::string& caminho_arquivo) {
-    std::vector<Processo> lista_processos;  // Lista que vamos preencher
+    std::vector<Processo> lista_processos;  // Vai guardar todos os processos do CSV
     std::ifstream arquivo(caminho_arquivo);  // Abre o arquivo para leitura
-    std::string linha;                       // Armazena cada linha lida
-    int pid = 1;                             // Contador de ID dos processos
+    std::string linha;                       // Linha atual que estamos lendo
+    int pid = 1;                             // Número do processo gerado automaticamente
 
-    // Pula o cabeçalho do arquivo (primeira linha)
+    // Pula o cabeçalho, ele não tem dados de processo.
     std::getline(arquivo, linha);
 
-    // Lê cada linha do arquivo
+    // Lê o arquivo linha a linha até acabar.
     while (std::getline(arquivo, linha)) {
-        std::stringstream ss(linha);  // Processa a linha como uma stream
-        Processo p;                    // Cria novo processo
-        char virgula;                  // Variável temporária para ler vírgulas
+        std::stringstream ss(linha);  // Cria uma stream para separar os campos
+        Processo p;                    // Novo processo que vamos preencher
+        char virgula;                  // Leio as vírgulas entre os valores
 
-        // Atribui ID sequencial ao processo
+        // Cada processo ganha um PID sequencial.
         p.pid = pid++;
         
-        // Lê os valores do CSV separados por vírgula
-        ss >> p.tempo_chegada    >> virgula      // Lê: tempo_chegada,
-           >> p.tempo_execucao   >> virgula      // Lê: tempo_execucao,
-           >> p.prioridade       >> virgula      // Lê: prioridade,
-           >> p.memoria_necessaria;              // Lê: memoria_necessaria
+        // Aqui a linha do CSV é convertida em valores do processo.
+        ss >> p.tempo_chegada    >> virgula  // tempo de chegada,
+           >> p.tempo_execucao   >> virgula  // tempo de execução,
+           >> p.prioridade       >> virgula  // prioridade,
+           >> p.memoria_necessaria;          // memória necessária
 
-        // Inicializa o tempo restante com o tempo total de execução
+        // O tempo restante começa igual ao tempo total necessário.
         p.tempo_restante = p.tempo_execucao;
         
-        // Adiciona o processo à lista
+        // Salva o processo na lista final.
         lista_processos.push_back(p);
     }
     
-    return lista_processos;  // Retorna todos os processos lidos
+    return lista_processos;  // Retorna tudo que foi lido do CSV.
 }

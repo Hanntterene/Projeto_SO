@@ -5,14 +5,13 @@
 #include "CSVParser.h"
 #include "Simulator.h"
 
-// Função auxiliar: imprime uma linha de traços para deixar o relatório mais legível
-// Facilita visualizar as diferentes seções do output
+// Esse helper só imprime uma linha de traços para organizar o relatório.
 void separador(int largura = 60) {
     std::cout << std::string(largura, '-') << "\n";
 }
 
-// Função que mostra quando cada processo rodou no processador
-// Exibe um gráfico visual (barras de #) para facilitar a compreensão da execução
+// Imprime a timeline de execução dos processos.
+// Cada bloco mostra quando um processo estava ocupando a CPU.
 void imprimirTimeline(const std::vector<EntradaTimeline>& timeline) {
     std::cout << "\nTimeline de execucao:\n";
     separador();
@@ -30,8 +29,8 @@ void imprimirTimeline(const std::vector<EntradaTimeline>& timeline) {
     }
 }
 
-// Função que mostra os resultados da simulação em forma de tabela
-// Exibe informações importantes como tempo de espera e tempo de resposta de cada processo
+// Imprime a tabela de resultados e as métricas finais.
+// Aqui a ideia é mostrar o que aconteceu com cada processo.
 void imprimirResultados(const std::vector<Processo>& processos,
                         const ResultadoSimulacao& resultado) {
     std::cout << "\nResultados por processo:\n";
@@ -74,14 +73,8 @@ void imprimirResultados(const std::vector<Processo>& processos,
     std::cout << "Total de page faults   : " << resultado.total_page_faults    << "\n";
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROGRAMA PRINCIPAL - Simulador de Sistemas Operacionais
-// 
-// Este programa simula como um sistema operacional gerencia processos e memória.
-// Testa 3 algoritmos diferentes de escalonamento (Round Robin, SJF, Prioridade)
-// combinados com 3 políticas de gerenciamento de memória (FIFO, LRU, Ótimo)
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// Programa principal do simulador em modo terminal.
+// Ele carrega o CSV, mostra os processos e executa três combinações de testes.
 int main(int argc, char* argv[]) {
     // Define qual arquivo CSV contém os processos a simular
     std::string caminho_csv = "examples/processes.csv";

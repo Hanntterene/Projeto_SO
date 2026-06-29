@@ -2,12 +2,11 @@
 #include <algorithm>
 #include <queue>
 
-// Construtor: inicializa o escalonador com a política escolhida e o quantum
-// quantum = tempo máximo que cada processo executa de forma contínua (usado no Round Robin)
+// Construtor: inicializa o escalonador com a política escolhida e o quantum.
 Escalonador::Escalonador(PoliticaEscalonamento politica, int quantum)
     : politica(politica), quantum(quantum) {}
 
-// Função principal: escolhe qual algoritmo de escalonamento executar
+// Esse método escolhe qual algoritmo será usado a partir da política.
 std::vector<EntradaTimeline> Escalonador::executar(std::vector<Processo>& processos) {
     switch (politica) {
         // Round Robin: cada processo tem um tempo máximo para rodar
@@ -20,8 +19,8 @@ std::vector<EntradaTimeline> Escalonador::executar(std::vector<Processo>& proces
     return {};
 }
 
-// Função auxiliar: agrupa execuções consecutivas do mesmo processo
-// Exemplo: P1[0->2], P1[2->4] vira P1[0->4] (fica mais limpo no resultado)
+// Junta blocos consecutivos do mesmo processo na timeline.
+// Torna a saída mais fácil de ler no terminal.
 static std::vector<EntradaTimeline> compactar(const std::vector<EntradaTimeline>& tl) {
     if (tl.empty()) return tl;
     std::vector<EntradaTimeline> resultado = { tl[0] };
@@ -39,12 +38,7 @@ static std::vector<EntradaTimeline> compactar(const std::vector<EntradaTimeline>
 }
 
 // ALGORITMO 1: ROUND ROBIN
-// 
-// Como funciona:
-// Cada processo recebe um tempo fixo (quantum) para executar.
-// Se não terminar nesse tempo, vai para o final da fila e outro processo executa.
-// É justo porque dá chances iguais para todos.
-//
+// Cada processo pega um pedaço de CPU por vez. Se não terminar, volta para o fim da fila.
 std::vector<EntradaTimeline> Escalonador::executarRoundRobin(std::vector<Processo>& processos) {
     std::vector<EntradaTimeline> timeline;  // Guarda quando cada processo executou
     std::queue<int> fila;                   // Fila de espera dos processos
@@ -109,13 +103,8 @@ std::vector<EntradaTimeline> Escalonador::executarRoundRobin(std::vector<Process
     return timeline;
 }
 
-// ALGORITMO 2: SJF PREEMPTIVO (Shortest Remaining Time First)
-// 
-// Como funciona:
-// A cada momento, executa o processo que tem MENOS tempo faltando.
-// Se chegar um processo novo mais curto, interrompe o que estava rodando.
-// É muito eficiente em termos de tempo médio, mas pode ser injusto com processos longos.
-//
+// ALGORITMO 2: SJF PREEMPTIVO
+// Sempre escolhe o processo com menos tempo restante para executar.
 std::vector<EntradaTimeline> Escalonador::executarSJF(std::vector<Processo>& processos) {
     std::vector<EntradaTimeline> timeline;
     int relogio = 0, finalizados = 0;  // Contador de tempo e processos terminados
@@ -164,12 +153,7 @@ std::vector<EntradaTimeline> Escalonador::executarSJF(std::vector<Processo>& pro
 }
 
 // ALGORITMO 3: PRIORIDADE PREEMPTIVA
-// 
-// Como funciona:
-// Sempre executa o processo com MAIOR PRIORIDADE (número menor = mais importante).
-// Se chegar um processo com prioridade melhor, interrompe o que está rodando.
-// É usado em sistemas reais para processos críticos (ex: interrupções de hardware).
-//
+// Sempre executa o processo de maior prioridade disponível.
 std::vector<EntradaTimeline> Escalonador::executarPrioridade(std::vector<Processo>& processos) {
     std::vector<EntradaTimeline> timeline;
     int relogio = 0, finalizados = 0;  // Contador de tempo e processos terminados

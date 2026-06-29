@@ -4,6 +4,14 @@
 // Construtor: calcula quantos frames (blocos) de memória física temos disponíveis
 // num_frames = memória total / tamanho de cada página
 // Exemplo: 256 MB / 64 MB por página = 4 frames
+/*
+Exemplo: 
+3 Processos + Memória Física 1024 MB (4 páginas de 256 MB)
+P1: 0s → 512 MB (2 páginas)
+P2: 1s → 256 MB (1 página)  
+P3: 3s → 768 MB (3 páginas)
+*/
+
 GerenciadorMemoria::GerenciadorMemoria(int memoria_fisica_mb, int tamanho_pagina_mb,
                                        PoliticaSubstituicao politica)
     : num_frames(std::max(1, memoria_fisica_mb / tamanho_pagina_mb)),
@@ -64,9 +72,20 @@ void GerenciadorMemoria::carregarPagina(int id_pagina, int uso_futuro) {
 // Como funciona:
 // A primeira página que foi carregada é a primeira a ser removida.
 // É como uma fila: quem entra primeiro, sai primeiro.
-// Vantagem: muito simples de implementar
-// Desvantagem: pode remover páginas ainda muito usadas
 //
+/*
+t=0s: P1 chega → Mem: [P1p1, P1p2]            (2/4 páginas)
+t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]      (3/4 páginas)
+t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
+
+t=4s: P3 precisa p2 → Remove P1p1 (mais antigo)
+     Mem: [P1p2, P2p1, P3p1, P3p2]
+     
+t=5s: P3 precisa p3 → Remove P1p2
+     Mem: [P2p1, P3p1, P3p2, P3p3]
+     
+PAGE FAULTS: 5
+*/
 void GerenciadorMemoria::substituirFIFO(int id_pagina) {
     // Remove a página mais antiga (primeiro da fila)
     if (!frames.empty()) {
@@ -83,9 +102,20 @@ void GerenciadorMemoria::substituirFIFO(int id_pagina) {
 // Como funciona:
 // Remove a página que foi ACESSADA HÁ MAIS TEMPO.
 // Baseia-se na ideia: se não usou recentemente, provavelmente não usará em breve.
-// Vantagem: muito eficiente na prática
-// Desvantagem: precisa guardar tempo de último acesso de cada página
-//
+/*
+t=0s: P1 chega → Mem: [P1p1, P1p2]
+t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]
+t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
+
+t=4s: P3 precisa p2 → P1p1 é a menos usada recentemente
+     Remove P1p1 → Mem: [P1p2, P2p1, P3p1, P3p2]
+     
+t=5s: P3 precisa p3 → P1p2 é a menos usada
+     Remove P1p2 → Mem: [P2p1, P3p1, P3p2, P3p3]
+     
+PAGE FAULTS: 5
+*/
+
 void GerenciadorMemoria::substituirLRU(int id_pagina) {
     // Encontra qual página foi acessada há mais tempo
     auto pagina_para_remover = frames.front();
@@ -113,13 +143,22 @@ void GerenciadorMemoria::substituirLRU(int id_pagina) {
 // 
 // Como funciona:
 // Remove a página que será ACESSADA MAIS TARDE NO FUTURO.
-// É a melhor estratégia possível, mas impraticável na realidade!
-// (Computadores não conseguem prever o futuro!)
-// Vantagem: teórico, nos mostra o máximo que é possível
-// Desvantagem: impossível de implementar em um SO real
+
+/*
+t=0s: P1 chega → Mem: [P1p1, P1p2]
+t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]
+t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
+
+t=4s: P3 precisa p2 → P1p1 nunca mais será usado (P1 terminou)
+     Remove P1p1 → Mem: [P1p2, P2p1, P3p1, P3p2]
+     
+t=5s: P3 precisa p3 → P1p2 nunca mais será usado
+     Remove P1p2 → Mem: [P2p1, P3p1, P3p2, P3p3]
+     
+PAGE FAULTS: 5  */
+
 //
 void GerenciadorMemoria::substituirOtimo(int id_pagina, int uso_futuro) {
-    // Se não tem informação do futuro, usa FIFO como fallback
     if (uso_futuro == -1 || frames.empty()) {
         substituirFIFO(id_pagina);
         return;

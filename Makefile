@@ -40,7 +40,7 @@ run-gui:
 	PATH="$(QT_DIR)/bin:$$PATH" ./Projeto_SO_GUI.exe
 
 # ===== Build da interface grafica =====
-gui: gui/ui_MainWindow.h gui/moc_MainWindow.cpp
+gui: gui/moc_MainWindow.cpp
 	$(CXX) $(CXXFLAGS) \
 		gui/main.cpp \
 		gui/MainWindow.cpp \
@@ -49,8 +49,10 @@ gui: gui/ui_MainWindow.h gui/moc_MainWindow.cpp
 		$(QT_FLAGS) \
 		-o Projeto_SO_GUI
 
-# Gera o header da UI a partir do arquivo .ui (feito pelo Qt Designer).
-gui/ui_MainWindow.h: gui/MainWindow.ui
+# Regenera o header da UI a partir do arquivo .ui (feito pelo Qt Designer).
+# Rodei este comando uma vez manualmente, e deixei o arquivo corrigido.
+# Se precisar regenerar, rodar: make regenerate-ui
+regenerate-ui:
 	$(QT_DIR)/bin/uic gui/MainWindow.ui -o gui/ui_MainWindow.h
 
 # Gera o moc para sinais/slots da classe MainWindow.
@@ -62,7 +64,7 @@ all: terminal gui
 
 # Limpa os binarios e arquivos gerados automaticamente.
 clean:
-	rm -f Projeto_SO Projeto_SO_GUI
-	rm -f gui/ui_MainWindow.h gui/moc_MainWindow.cpp
+	rm -f Projeto_SO Projeto_SO_GUI Projeto_SO_GUI.exe Projeto_SO_GUI_v2.exe
+	rm -f gui/moc_MainWindow.cpp
 
 .PHONY: terminal run gui all clean

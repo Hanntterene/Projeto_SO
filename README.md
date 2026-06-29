@@ -1,31 +1,28 @@
 ﻿# Simulador de Sistemas Operacionais
 
-Projeto da disciplina de SO para simular, de forma visual e em terminal:
-- escalonamento de processos;
-- gerenciamento de memoria com paginacao.
+Este projeto é da disciplina de SO e mostra, na prática, como o sistema operacional pode cuidar de processos e memória.
+A ideia foi fazer algo simples de entender, testável no terminal e que também tenha versão com GUI.
 
-A ideia aqui foi implementar algo que desse para testar rapido e tambem explicar na apresentacao.
+## 1) O que este projeto faz
 
-## 1) O que o projeto faz
-
-### Escalonamento implementado
-- Round Robin (com quantum)
+### Escalonamento de processos
+- Round Robin com quantum
 - SJF preemptivo
 - Prioridade preemptiva
 
-### Substituicao de paginas implementada
+### Gerenciamento de memória com paginação
 - FIFO
 - LRU
-- Otimo (no estado atual do projeto, com simplificacao)
+- Ótimo (implementado como simplificação didática)
 
-### Saidas geradas
-- Timeline de execucao
-- Tabela com metricas por processo
-- Media de tempo de espera
-- Media de tempo de resposta
+### Resultados que o programa gera
+- Timeline de execução dos processos
+- Tabela com métricas por processo
+- Média de tempo de espera
+- Média de tempo de resposta
 - Total de page faults
 
-## 2) Estrutura de pastas
+## 2) Estrutura do projeto
 
 ```text
 Projeto_SO/
@@ -53,18 +50,17 @@ Projeto_SO/
   README.md
 ```
 
-## 3) Formato do CSV de entrada
+## 3) Como é o CSV de entrada
 
-Cabecalho esperado:
+O arquivo deve começar com o cabeçalho:
 
 ```csv
 chegada,burst,prioridade,memoria
 ```
 
-Exemplo (`examples/processes.csv`):
+Depois, cada linha representa um processo:
 
 ```csv
-chegada,burst,prioridade,memoria
 0,5,3,64
 1,3,2,128
 2,8,1,32
@@ -72,9 +68,14 @@ chegada,burst,prioridade,memoria
 4,4,2,64
 ```
 
+- `chegada`: momento em que o processo entra no sistema
+- `burst`: tempo total que ele precisa da CPU
+- `prioridade`: número menor = mais prioridade
+- `memoria`: memória necessária em MB
+
 ## 4) Como compilar e executar
 
-> Rode os comandos dentro da pasta do projeto.
+> Execute os comandos dentro da pasta do projeto.
 
 ### 4.1 Modo terminal
 
@@ -90,7 +91,7 @@ Executar com o CSV de exemplo:
 ./Projeto_SO.exe examples/processes.csv
 ```
 
-Ou usar o atalho:
+Ou apenas:
 
 ```bash
 make run
@@ -98,62 +99,49 @@ make run
 
 ### 4.2 Modo GUI (Qt)
 
-Compilar GUI:
+Compilar a interface:
 
 ```bash
 make gui
 ```
 
-Executar GUI sem precisar mexer no PATH global:
+Executar:
 
 ```bash
 make run-gui
 ```
 
-## 5) Explicacao rapida de cada modulo
+## 5) O que cada arquivo faz
 
-### `src/CSVParser.*`
-Leitura do CSV e criacao dos processos em memoria.
+- `src/CSVParser.*`: lê o CSV e cria os objetos de processo
+- `src/Process.h`: define a estrutura de dados de um processo
+- `src/Scheduler.*`: faz o escalonamento e monta a timeline
+- `src/Memory.*`: simula page faults e substituição de páginas
+- `src/Simulator.*`: junta escalonador e memória, calcula métricas
+- `src/main.cpp`: versão de terminal que roda os testes
+- `gui/*`: versão com interface gráfica usando Qt
 
-### `src/Process.h`
-Struct com os campos do processo (entrada + campos preenchidos durante simulacao).
+## 6) Configurações importantes
 
-### `src/Scheduler.*`
-Implementa RR, SJF preemptivo e Prioridade preemptiva, gerando a timeline.
-
-### `src/Memory.*`
-Simula frames, page fault e politica de substituicao (FIFO/LRU/Otimo).
-
-### `src/Simulator.*`
-Orquestra tudo: chama escalonador, simula memoria e calcula metricas finais.
-
-### `src/main.cpp`
-Versao terminal para teste rapido e comparacao de politicas.
-
-### `gui/MainWindow.*` + `gui/main.cpp`
-Versao com interface grafica em Qt.
-
-## 6) Parametros principais
-
-No terminal, os parametros padrao estao em `src/main.cpp`:
+No terminal, os valores padrão estão em `src/main.cpp`:
 - `quantum`
 - `memoria_fisica`
 - `tamanho_pagina`
 
-Na GUI, isso e configurado na interface.
+Na GUI, esses valores são escolhidos pela interface.
 
-## 7) Observacoes importantes
+## 7) Observações
 
-- O projeto esta focado em didatica: prioriza clareza de leitura e comparacao de algoritmos.
-- Existem simplificacoes no modelo de memoria (normal para projeto de disciplina).
-- O alvo principal de execucao no Windows foi com MinGW + Qt 6.x.
+- O projeto é focado em didática, então algumas partes são simplificadas.
+- A simulação de memória trata cada processo como se tivesse uma página fixa.
+- A política ótima é uma implementação teórica só para comparação.
 
-## 8) Entrega/apresentacao (sugestao)
+## 8) Sugestão para apresentação
 
-Na apresentacao, vale mostrar nessa ordem:
-1. leitura do CSV;
-2. escolha de algoritmo/politica na GUI;
-3. timeline e tabela;
-4. comparacao das metricas entre politicas.
+Mostre nesta ordem:
+1. como o CSV é lido;
+2. como se escolhe o algoritmo/política;
+3. a timeline de execução;
+4. as métricas e as diferenças entre políticas.
 
-Assim fica facil de defender o projeto de forma objetiva.
+Assim você explica bem o que o código faz e por que cada algoritmo se comporta diferente.
