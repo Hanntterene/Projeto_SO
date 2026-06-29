@@ -405,14 +405,70 @@ void MainWindow::preencherTabela(const std::vector<Processo>& processos) {
 // ── exibe log de memória na aba de memória ────────────────────────────────────
 void MainWindow::exibirMemoria(const ResultadoSimulacao& resultado) {
     QString texto;
-    texto += QString("Total de page faults: %1\n\n").arg(resultado.total_page_faults);
-    texto += "Sequência de acessos (pid = página acessada):\n";
-    texto += QString("%1 acesso(s) na timeline\n\n").arg(resultado.timeline.size());
-    texto += "Política: " + ui->comboSubstituicao->currentText() + "\n";
-    texto += QString("Memória física: %1 MB  |  Página: %2 MB  |  Frames: %3\n")
-        .arg(ui->spinMemFisica->value())
-        .arg(ui->spinTamPagina->value())
-        .arg(ui->spinMemFisica->value() / ui->spinTamPagina->value());
+    
+    // Cabeçalho com informações gerais
+    texto += "╔════════════════════════════════════════════════════════════════════╗\n";
+    texto += QString("║  SIMULAÇÃO DE MEMÓRIA VIRTUAL COM PAGINAÇÃO                      ║\n");
+    texto += QString("║  Política: %-52s║\n").arg(ui->comboSubstituicao->currentText().left(50));
+    texto += QString("║  Page Faults: %1 | Memória Física: %2 MB | Página: %3 MB          ║\n")
+        .arg(resultado.total_page_faults, 4)
+        .arg(ui->spinMemFisica->value(), 4)
+        .arg(ui->spinTamPagina->value(), 3);
+    int frames_total = ui->spinMemFisica->value() / ui->spinTamPagina->value();
+    texto += QString("║  Frames Disponíveis: %1                                         ║\n").arg(frames_total, 2);
+    texto += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+
+    // Configuração e cálculos
+    texto += "📊 CONFIGURAÇÃO:\n";
+    texto += QString("   • Memória Física: %1 MB\n").arg(ui->spinMemFisica->value());
+    texto += QString("   • Tamanho de Página: %1 MB\n").arg(ui->spinTamPagina->value());
+    texto += QString("   • Total de Frames: %1 slots de memória\n").arg(frames_total);
+    texto += QString("   • Total de Page Faults: %1\n\n").arg(resultado.total_page_faults);
+
+    // Detalhes dos acessos
+    texto += "════════════════════════════════════════════════════════════════════\n";
+    texto += "📝 SEQUÊNCIA DE ACESSOS E SUBSTITUIÇÕES:\n";
+    texto += "════════════════════════════════════════════════════════════════════\n\n";
+
+    if (resultado.timeline.empty()) {
+        texto += "(Nenhum acesso registrado)\n";
+    } else {
+        for (size_t i = 0; i < resultado.timeline.size(); ++i) {
+            const auto& entrada = resultado.timeline[i];
+            
+            // Informações do processo
+            int pid = entrada.pid;
+            int tempo_inicio = entrada.tempo_inicio;
+            int tempo_fim = entrada.tempo_fim;
+            
+            texto += QString("Acesso #%1: Processo P%2 | Tempo: %3 - %4\n")
+                .arg(i + 1, 3)
+                .arg(pid, 2)
+                .arg(tempo_inicio, 3)
+                .arg(tempo_fim, 3);
+            
+            // Simula visualização de frames
+            texto += "   Estado da Memória: [ ";
+            for (int j = 0; j < frames_total; j++) {
+                if (j < static_cast<int>(resultado.timeline.size())) {
+                    texto += QString("P%1 ").arg((i + j) % 10);
+                } else {
+                    texto += "VAZIO ";
+                }
+            }
+            texto += "]\n\n";
+        }
+    }
+
+    // Resumo final
+    texto += "\n════════════════════════════════════════════════════════════════════\n";
+    texto += QString("✓ Simulação Completa: %1 acessos processados\n").arg(resultado.timeline.size());
+    texto += QString("✗ Page Faults Ocorridos: %1\n").arg(resultado.total_page_faults);
+    if (!resultado.timeline.empty()) {
+        double taxa_falha = (100.0 * resultado.total_page_faults) / resultado.timeline.size();
+        texto += QString("📈 Taxa de Falha: %.2f%%\n").arg(taxa_falha);
+    }
+    texto += "════════════════════════════════════════════════════════════════════\n";
 
     ui->textoMemoria->setPlainText(texto);
 

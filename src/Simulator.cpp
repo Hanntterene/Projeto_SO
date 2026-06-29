@@ -18,13 +18,29 @@ ResultadoSimulacao Simulador::executar(std::vector<Processo> processos) {
 
     // ETAPA 2 - MEMORIA
     // Depois simulo os acessos de memoria em cima da timeline.
-    // Neste modelo atual, cada processo acessa uma pagina ligada ao PID.
+    // Cada processo acessa múltiplas páginas de acordo com sua memória necessária.
     GerenciadorMemoria memoria(memoria_fisica_mb, tamanho_pagina_mb, politica_memoria);
-    for (auto& entrada : timeline) {
-        // Simplificacao didatica: processo -> 1 pagina.
-        int id_pagina = entrada.pid;
-        // Cada acesso pode (ou nao) gerar page fault.
-        memoria.acessarPagina(id_pagina);
+    
+    // Primeiro, mapear quantas páginas cada processo precisa
+    std::unordered_map<int, int> num_paginas_por_processo;  // pid -> número de páginas
+    for (auto& proc : processos) {
+        int paginas_necessarias = std::max(1, (proc.memoria_necessaria + tamanho_pagina_mb - 1) / tamanho_pagina_mb);
+        num_paginas_por_processo[proc.pid] = paginas_necessarias;
+    }
+    
+    // Simular acessos: cada entrada da timeline representa um acesso
+    // O processo acessa suas páginas sequencialmente
+    for (size_t i = 0; i < timeline.size(); ++i) {
+        auto& entrada = timeline[i];
+        int pid = entrada.pid;
+        int tempo = entrada.tempo_inicio;
+        int num_paginas = num_paginas_por_processo[pid];
+        
+        // Acessa todas as páginas do processo durante sua execução
+        for (int num_pagina = 1; num_pagina <= num_paginas; ++num_pagina) {
+            int id_pagina = pid * 100 + num_pagina;  // ID único global
+            memoria.acessarPagina(id_pagina, pid, num_pagina, tempo);
+        }
     }
 
     // ETAPA 3 - METRICAS FINAIS

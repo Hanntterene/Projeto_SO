@@ -2,16 +2,6 @@
 #include <algorithm>
 
 // Construtor: calcula quantos frames (blocos) de memória física temos disponíveis
-// num_frames = memória total / tamanho de cada página
-// Exemplo: 256 MB / 64 MB por página = 4 frames
-/*
-Exemplo: 
-3 Processos + Memória Física 1024 MB (4 páginas de 256 MB)
-P1: 0s → 512 MB (2 páginas)
-P2: 1s → 256 MB (1 página)  
-P3: 3s → 768 MB (3 páginas)
-*/
-
 GerenciadorMemoria::GerenciadorMemoria(int memoria_fisica_mb, int tamanho_pagina_mb,
                                        PoliticaSubstituicao politica)
     : num_frames(std::max(1, memoria_fisica_mb / tamanho_pagina_mb)),
@@ -19,171 +9,199 @@ GerenciadorMemoria::GerenciadorMemoria(int memoria_fisica_mb, int tamanho_pagina
 
 // Verifica se uma página já está carregada na memória física
 bool GerenciadorMemoria::estaNaMemoria(int id_pagina) {
-    // Procura a página na lista de frames
     return std::find(frames.begin(), frames.end(), id_pagina) != frames.end();
 }
 
-// Função principal: simula acesso a uma página de memória
-// Retorna true se houve PAGE FAULT (página não estava em memória)
-bool GerenciadorMemoria::acessarPagina(int id_pagina, int uso_futuro) {
-    // Se a página já está em memória física
-    if (estaNaMemoria(id_pagina)) {
-        // Para LRU e Ótimo, precisa atualizar quando foi acessada
-        if (politica == PoliticaSubstituicao::LRU || politica == PoliticaSubstituicao::OTIMO) {
-            ordem_lru[id_pagina] = relogio_lru++;  // Registra o tempo deste acesso
+// Gera nome visual da página (ex: "P1p1", "P2p3")
+std::string nomeVisualPagina(int pid, int numero_pagina) {
+    return "P" + std::to_string(pid) + "p" + std::to_string(numero_pagina);
+}
+
+// Gera lista visual do estado da memória com slots vazios
+std::vector<std::string> gerarEstadoVisual(const std::deque<int>& frames, 
+                                          int num_frames_total,
+                                          const std::unordered_map<int, std::string>& mapa_nomes) {
+    std::vector<std::string> visual;
+    for (int frame : frames) {
+        if (mapa_nomes.count(frame)) {
+            visual.push_back(mapa_nomes.at(frame));
+        } else {
+            visual.push_back(std::to_string(frame));
         }
-        return false;  // Não houve falta
+    }
+    // Adiciona slots vazios
+    while (static_cast<int>(visual.size()) < num_frames_total) {
+        visual.push_back("__");
+    }
+    return visual;
+}
+
+// Função principal: simula acesso a uma página de memória com contexto de processo
+bool GerenciadorMemoria::acessarPagina(int pagina_id, int pid, int numero_pagina, int tempo, int uso_futuro) {
+    // Constrói nome visual
+    std::string pagina_nome = nomeVisualPagina(pid, numero_pagina);
+    mapa_nomes_paginas[pagina_id] = pagina_nome;
+    
+    // Se a página já está em memória
+    if (estaNaMemoria(pagina_id)) {
+        if (politica == PoliticaSubstituicao::LRU || politica == PoliticaSubstituicao::OTIMO) {
+            ordem_lru[pagina_id] = relogio_lru++;
+        }
+        return false;
     }
 
-    // Página não estava em memória (PAGE FAULT!)
+    // PAGE FAULT - precisa carregar a página
     ++total_page_faults;
-    carregarPagina(id_pagina, uso_futuro);
+    carregarPagina(pagina_id, pid, numero_pagina, tempo, uso_futuro);
     return true;
 }
 
 // Carrega uma página na memória física
-// Se houver espaço vago, simplesmente adiciona
-// Se estiver cheio, remove uma página existente (segundo a política)
-void GerenciadorMemoria::carregarPagina(int id_pagina, int uso_futuro) {
+void GerenciadorMemoria::carregarPagina(int pagina_id, int pid, int numero_pagina, int tempo, int uso_futuro) {
+    std::string pagina_nome = nomeVisualPagina(pid, numero_pagina);
+    
+    EventoMemoria evento;
+    evento.tempo = tempo;
+    evento.pagina_id = pagina_id;
+    evento.pagina_nome = pagina_nome;
+    evento.page_fault = true;
+    evento.faults_neste_evento = 1;
+    evento.pagina_removida_id = -1;
+    evento.pagina_removida_nome = "";
+    
     // Se ainda há espaço disponível
     if (static_cast<int>(frames.size()) < num_frames) {
-        frames.push_back(id_pagina);  // Apenas adiciona
-        ordem_lru[id_pagina] = relogio_lru++;  // Registra tempo de carregamento
+        frames.push_back(pagina_id);
+        ordem_lru[pagina_id] = relogio_lru++;
+        evento.politica_usada = "";
+        evento.descricao = pagina_nome + " carregada";
+        evento.estado_memoria_nomes = gerarEstadoVisual(frames, num_frames, mapa_nomes_paginas);
+        historico.push_back(evento);
         return;
     }
 
-    // Se chegou aqui, a memória está cheia
-    // Precisa remover uma página existente usando a política escolhida
+    // Memória está cheia - precisa remover uma página
+    int pagina_removida = -1;
+    std::string motivo;
+    
     switch (politica) {
-        case PoliticaSubstituicao::FIFO:     // Primeira a entrar, primeira a sair
-            substituirFIFO(id_pagina);
+        case PoliticaSubstituicao::FIFO:
+            pagina_removida = frames.front();
+            frames.pop_front();
+            frames.push_back(pagina_id);
+            ordem_lru[pagina_id] = relogio_lru++;
+            evento.politica_usada = "FIFO";
+            motivo = "mais antigo";
             break;
-        case PoliticaSubstituicao::LRU:      // Remove a menos recentemente usada
-            substituirLRU(id_pagina);
+            
+        case PoliticaSubstituicao::LRU: {
+            pagina_removida = frames.front();
+            int menor_instante = ordem_lru[pagina_removida];
+            for (int p : frames) {
+                if (ordem_lru[p] < menor_instante) {
+                    menor_instante = ordem_lru[p];
+                    pagina_removida = p;
+                }
+            }
+            frames.erase(std::find(frames.begin(), frames.end(), pagina_removida));
+            ordem_lru.erase(pagina_removida);
+            frames.push_back(pagina_id);
+            ordem_lru[pagina_id] = relogio_lru++;
+            evento.politica_usada = "LRU";
+            motivo = "menos recentemente usada";
             break;
-        case PoliticaSubstituicao::OTIMO:    // Remove a que será usada mais tarde
-            substituirOtimo(id_pagina, uso_futuro);
+        }
+        
+        case PoliticaSubstituicao::OTIMO:
+            if (uso_futuro == -1) {
+                // Fallback para FIFO se não temos informação de futuro
+                pagina_removida = frames.front();
+                frames.pop_front();
+                frames.push_back(pagina_id);
+                ordem_lru[pagina_id] = relogio_lru++;
+                evento.politica_usada = "ÓTIMO (FIFO fallback)";
+                motivo = "sera usada mais tarde";
+            } else {
+                // Remove a que será usada mais tarde
+                pagina_removida = frames.front();
+                int maior_distancia = -1;
+                for (int p : frames) {
+                    int dist = uso_futuro - ordem_lru[p];
+                    if (dist > maior_distancia) {
+                        maior_distancia = dist;
+                        pagina_removida = p;
+                    }
+                }
+                frames.erase(std::find(frames.begin(), frames.end(), pagina_removida));
+                ordem_lru.erase(pagina_removida);
+                frames.push_back(pagina_id);
+                ordem_lru[pagina_id] = relogio_lru++;
+                evento.politica_usada = "ÓTIMO";
+                motivo = "sera usada mais tarde";
+            }
             break;
     }
+    
+    evento.pagina_removida_id = pagina_removida;
+    if (mapa_nomes_paginas.count(pagina_removida)) {
+        evento.pagina_removida_nome = mapa_nomes_paginas[pagina_removida];
+    } else {
+        evento.pagina_removida_nome = std::to_string(pagina_removida);
+    }
+    
+    evento.descricao = pagina_nome + " → Remove " + evento.pagina_removida_nome + " (" + motivo + ")";
+    evento.estado_memoria_nomes = gerarEstadoVisual(frames, num_frames, mapa_nomes_paginas);
+    historico.push_back(evento);
 }
 
-// POLÍTICA 1: FIFO (First In First Out)
-// 
-// Como funciona:
-// A primeira página que foi carregada é a primeira a ser removida.
-// É como uma fila: quem entra primeiro, sai primeiro.
-//
-/*
-t=0s: P1 chega → Mem: [P1p1, P1p2]            (2/4 páginas)
-t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]      (3/4 páginas)
-t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
 
-t=4s: P3 precisa p2 → Remove P1p1 (mais antigo)
-     Mem: [P1p2, P2p1, P3p1, P3p2]
-     
-t=5s: P3 precisa p3 → Remove P1p2
-     Mem: [P2p1, P3p1, P3p2, P3p3]
-     
-PAGE FAULTS: 5
-*/
+// POLÍTICA 1: FIFO (First In First Out)
 void GerenciadorMemoria::substituirFIFO(int id_pagina) {
-    // Remove a página mais antiga (primeiro da fila)
     if (!frames.empty()) {
         frames.pop_front();
     }
-
-    // Adiciona a nova página (entra no final da fila)
     frames.push_back(id_pagina);
-    ordem_lru[id_pagina] = relogio_lru++;  // Registra tempo de entrada
+    ordem_lru[id_pagina] = relogio_lru++;
 }
 
 // POLÍTICA 2: LRU (Least Recently Used)
-// 
-// Como funciona:
-// Remove a página que foi ACESSADA HÁ MAIS TEMPO.
-// Baseia-se na ideia: se não usou recentemente, provavelmente não usará em breve.
-/*
-t=0s: P1 chega → Mem: [P1p1, P1p2]
-t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]
-t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
-
-t=4s: P3 precisa p2 → P1p1 é a menos usada recentemente
-     Remove P1p1 → Mem: [P1p2, P2p1, P3p1, P3p2]
-     
-t=5s: P3 precisa p3 → P1p2 é a menos usada
-     Remove P1p2 → Mem: [P2p1, P3p1, P3p2, P3p3]
-     
-PAGE FAULTS: 5
-*/
-
 void GerenciadorMemoria::substituirLRU(int id_pagina) {
-    // Encontra qual página foi acessada há mais tempo
     auto pagina_para_remover = frames.front();
     auto menor_instante = ordem_lru[pagina_para_remover];
 
-    // Procura entre todas as páginas em memória
     for (int pagina : frames) {
-        // Se achou uma que foi acessada mais cedo
         if (ordem_lru[pagina] < menor_instante) {
             menor_instante = ordem_lru[pagina];
             pagina_para_remover = pagina;
         }
     }
 
-    // Remove a página menos recentemente usada
     frames.erase(std::find(frames.begin(), frames.end(), pagina_para_remover));
     ordem_lru.erase(pagina_para_remover);
-
-    // Adiciona a nova página
     frames.push_back(id_pagina);
-    ordem_lru[id_pagina] = relogio_lru++;  // Registra tempo do novo acesso
+    ordem_lru[id_pagina] = relogio_lru++;
 }
 
 // POLÍTICA 3: ÓTIMO (Optimal)
-// 
-// Como funciona:
-// Remove a página que será ACESSADA MAIS TARDE NO FUTURO.
-
-/*
-t=0s: P1 chega → Mem: [P1p1, P1p2]
-t=1s: P2 chega → Mem: [P1p1, P1p2, P2p1]
-t=3s: P3 chega → Mem: [P1p1, P1p2, P2p1, P3p1] (4/4 CHEIO)
-
-t=4s: P3 precisa p2 → P1p1 nunca mais será usado (P1 terminou)
-     Remove P1p1 → Mem: [P1p2, P2p1, P3p1, P3p2]
-     
-t=5s: P3 precisa p3 → P1p2 nunca mais será usado
-     Remove P1p2 → Mem: [P2p1, P3p1, P3p2, P3p3]
-     
-PAGE FAULTS: 5  */
-
-//
 void GerenciadorMemoria::substituirOtimo(int id_pagina, int uso_futuro) {
     if (uso_futuro == -1 || frames.empty()) {
         substituirFIFO(id_pagina);
         return;
     }
 
-    // Encontra qual página será usada mais tarde
     int pagina_para_remover = frames.front();
     int maior_distancia = -1;
 
-    // Procura entre todas as páginas em memória
     for (int pagina : frames) {
-        // Calcula quando será usado (uso_futuro - último acesso)
         int distancia = uso_futuro - ordem_lru[pagina];
-        // Se vai ser usado mais tarde que as outras
         if (distancia > maior_distancia) {
             maior_distancia = distancia;
             pagina_para_remover = pagina;
         }
     }
 
-    // Remove a página que será usada mais tarde
     frames.erase(std::find(frames.begin(), frames.end(), pagina_para_remover));
     ordem_lru.erase(pagina_para_remover);
-
-    // Adiciona a nova página
     frames.push_back(id_pagina);
-    ordem_lru[id_pagina] = relogio_lru++;  // Registra tempo do novo acesso
+    ordem_lru[id_pagina] = relogio_lru++;
 }
